@@ -1,0 +1,15 @@
+# editors
+.idea/
+.vscode/
+
+# Python
+*.egg-info/
+.pytest_cache/
+__pycache__
+.cache/
+venv*/
+
+# crossTF99.6%
+*.mp4
+videos/
+

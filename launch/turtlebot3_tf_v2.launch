@@ -1,0 +1,16 @@
+<!--
+滚转角（roll）是绕X轴旋转，俯仰角（pitch）是绕Y轴旋转，偏航角（yaw）是绕Z轴旋转
+-->
+<launch>
+
+
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="/home/hhd/PycharmProjects/catkin_ws/src/CrowdNavRL/world/turtlebot3_tf_v2.world"/>
+    <arg name="paused" value="false"/>
+    <arg name="use_sim_time" value="true"/>
+    <arg name="gui" value="true"/>
+    <arg name="headless" value="false"/>
+    <arg name="debug" value="false"/>
+  </include>
+
+</launch>
