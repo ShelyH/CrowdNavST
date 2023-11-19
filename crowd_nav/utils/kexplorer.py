@@ -9,7 +9,7 @@ from crowd_nav.utils.utils_sac import fullstateTotensor, transform_h, transform_
 def kexplorer(num_updates, is_rl, env, robot, policy, env_config, args, up):
     training_step = 0
     base_dir = args.log_path + args.env_id + "/ORCA_exp{}".format(args.seed)
-    print(base_dir)
+    # print(base_dir)
     writer = SummaryWriter(base_dir)
     for i in range(num_updates):
         ob = env.reset('train')

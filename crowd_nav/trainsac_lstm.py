@@ -22,19 +22,21 @@ dirPath = os.path.dirname(os.path.realpath(__file__))
 
 def main():
     parser = argparse.ArgumentParser('Parse configuration file')
-    parser.add_argument('--output_dir', type=str, default='data/output')
     parser.add_argument('--policy', type=str, default='rnnsac')
-    parser.add_argument('--env_config', type=str, default='configs/env.config')
-    parser.add_argument('--policy_config', type=str, default='configs/policy.config')
-    parser.add_argument('--train_config', type=str, default='configs/train.config')
-    parser.add_argument('--resume', default=False, action='store_true')
+    parser.add_argument('--batch_size', default=128, type=int)
+    parser.add_argument('--save_interval', type=int, default=100)
     parser.add_argument('--gpu', default=False, action='store_true')
     parser.add_argument('--debug', default=False, action='store_true')
-    parser.add_argument("--env_name", default="CrowdSim-v0")  # OpenAI gym environment name
-    parser.add_argument('--batch_size', default=128, type=int)  # mini batch size
-    parser.add_argument('--save_interval', type=int, default=100)
-    parser.add_argument('--deterministic', default=False, action='store_true')
+    parser.add_argument('--resume', default=False, action='store_true')
+    parser.add_argument('--output_dir', type=str, default='data/output')
     parser.add_argument('--visualize', default=False, action='store_true')
+    parser.add_argument('--deterministic', default=False, action='store_true')
+    parser.add_argument('--env_config', type=str, default='configs/env.config')
+    parser.add_argument("--seed", type=int, default=0, help="Seed for reproducing")
+    parser.add_argument('--train_config', type=str, default='configs/train.config')
+    parser.add_argument('--policy_config', type=str, default='configs/policy.config')
+    parser.add_argument("--env_id", type=str, default="CrowdSim-v0", help="Environment Id")
+    parser.add_argument('--log_path', type=str, default='data/log/', help="Directory to save logs")
     args = parser.parse_args()
     # configure paths
     make_new_dir = True
@@ -43,6 +45,7 @@ def main():
         key = 'y'
         if key == 'y' and not args.resume:
             shutil.rmtree(args.output_dir)
+            shutil.rmtree(args.log_path)
         else:
             make_new_dir = False
             args.env_config = os.path.join(args.output_dir, os.path.basename(args.env_config))
@@ -54,7 +57,8 @@ def main():
         shutil.copy(args.policy_config, args.output_dir)
         shutil.copy(args.train_config, args.output_dir)
     log_file = os.path.join(args.output_dir, 'output.log')
-    writer = SummaryWriter(args.output_dir)
+    base_dir = args.log_path + args.env_id + "/saclstm_exp{}".format(args.seed)
+    writer = SummaryWriter(base_dir)
     # configure logging
     mode = 'a' if args.resume else 'w'
     file_handler = logging.FileHandler(log_file, mode=mode)
@@ -69,7 +73,7 @@ def main():
     env_config.read(args.env_config)
     policy_config = configparser.RawConfigParser()
     policy_config.read(args.policy_config)
-    env = gym.make('CrowdSim-v0')
+    env = gym.make(args.env_id)
     env.configure(env_config)
     if args.visualize:
         fig, ax = plt.subplots(figsize=(8, 7))
@@ -90,17 +94,14 @@ def main():
                                          env.state_space.shape[0] - 5 * env_config.getint('sim', 'human_num') + 3,
                                          policy_config.getint('sac_rl', 'capacity'),
                                          policy_config.getint('sac_rl', 'batchsize'))
-    # print(env.state_space.shape[0] - 5 * env_config.getint('sim', 'human_num') - 5)
     policy.configure(policy_config)
     robot.set_policy(policy)
     env.set_robot(robot)
     training_step = 0
     num_updates = 50000
-    # policy.save_load_mo del('load', args.output_dir)
     for episode in range(num_updates):
         done = False
         state = env.reset('train')
-        # print(state)
 
         tol_reward = 0
         state = JointState(robot.get_full_state(), state)
@@ -111,12 +112,10 @@ def main():
             # action = robot.clip_action(action, env_config.getfloat('robot', 'v_pref'))
             ob, reward, done, info, _ = env.step(action)
             tol_reward += reward
-
             next_state = rotate(JointState(robot.get_full_state(), ob))
             policy.replay_buffer.push(state, action, reward, next_state, done)
-
             state = next_state
-            # env.render(update=True)
+
         if len(policy.replay_buffer) > 6000:
             q1_loss, q2_loss, pi_loss, alpha_loss = policy.optim_sac(training_step)
             writer.add_scalar("loss/pi_loss", scalar_value=pi_loss, global_step=training_step)

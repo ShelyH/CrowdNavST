@@ -115,9 +115,9 @@ def rotate_s(state):
                               dim=1), 2, dim=1, keepdim=True)
     da=torch.min(da).repeat(5).view(5,1)
     # print(torch.min(da))
-    new_state = torch.cat([radius, vx, vy, dg, rot_g, radius_sum, da], dim=1)
+    # new_state = torch.cat([radius, vx, vy, dg, rot_g, radius_sum, da], dim=1)
     # print(new_state.shape)
-    # new_state = torch.cat([radius, vx, vy, dg, rot_g, r_rot, radius_sum, hr_rot, da, px1, py1, vx1, vy1, radius1], dim=1)
+    new_state = torch.cat([radius, vx, vy, dg, rot_g, r_rot, radius_sum, hr_rot, da, px1, py1, vx1, vy1, radius1], dim=1)
     # old_state = torch.cat([radius, px, py, rvx, rvy, dg, da, px_h, py_h, vx_h, vy_h, radius1], dim=1)
     torch.set_printoptions(linewidth=200)
 

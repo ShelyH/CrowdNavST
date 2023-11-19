@@ -134,8 +134,8 @@ class RNNSAC(MultiHumanRL):
         super(MultiHumanRL, self).__init__()
         self.gamma = gamma
         self.tau = tau
-        self.self_state_dim = 5
-        self.human_state_dim = 2
+        self.self_state_dim = 7
+        self.human_state_dim = 7
         self.batchsize = batchsize
         self.reward_scale = reward_scale
         self.update_interval = update_interval
