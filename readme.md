@@ -1,8 +1,5 @@
 # CrowdNavRL
 
-*
-*[`Website`](https://www.epfl.ch/labs/vita/research/planning/crowd-robot-interaction/) | [`Paper`](https://arxiv.org/abs/1809.08835) | [`Video`](https://youtu.be/0sNVtQ9eqjA)
-**
 
 This repository contains the code for the following papers:
 
@@ -30,3 +27,4 @@ spatio-temporal semantic information, with the hope of finding the optimal navig
 spatio-temporal Transformer and self-adjusting policy entropy significantly reduce the conservatism of navigation
 policies. Experimental results demonstrate the priority of the proposed algorithm over the state-of-the-art methods.
 
+*[`Video`](https://youtu.be/TZi89cZVkPE)
