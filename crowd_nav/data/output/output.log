@@ -522,3 +522,16 @@
 2023-11-19 20:42:37, INFO: saclstm_episode:515, reward:-0.13, memory size:30605, time:15.50, info:Collision
 2023-11-19 20:42:37, INFO: saclstm_episode:516, reward:-0.16, memory size:30668, time:15.75, info:Collision
 2023-11-19 20:42:37, INFO: saclstm_episode:517, reward:-0.22, memory size:30696, time:7.00, info:Collision
+2023-11-19 20:42:38, INFO: saclstm_episode:518, reward:-0.22, memory size:30721, time:6.25, info:Collision
+2023-11-19 20:42:38, INFO: saclstm_episode:519, reward:-0.25, memory size:30748, time:6.75, info:Collision
+2023-11-19 20:42:38, INFO: saclstm_episode:520, reward:-0.23, memory size:30774, time:6.50, info:Collision
+2023-11-19 20:42:38, INFO: saclstm_episode:521, reward:-0.22, memory size:30798, time:6.00, info:Collision
+2023-11-19 20:42:38, INFO: saclstm_episode:522, reward:0.12, memory size:30879, time:20.25, info:Timeout
+2023-11-19 20:42:38, INFO: saclstm_episode:523, reward:-0.20, memory size:30940, time:15.25, info:Collision
+2023-11-19 20:42:38, INFO: saclstm_episode:524, reward:-0.23, memory size:30965, time:6.25, info:Collision
+2023-11-19 20:42:39, INFO: saclstm_episode:525, reward:0.15, memory size:31046, time:20.25, info:Timeout
+2023-11-19 20:42:39, INFO: saclstm_episode:526, reward:-0.26, memory size:31058, time:3.00, info:Collision
+2023-11-19 20:42:39, INFO: saclstm_episode:527, reward:-0.22, memory size:31084, time:6.50, info:Collision
+2023-11-19 20:42:39, INFO: saclstm_episode:528, reward:-0.23, memory size:31108, time:6.00, info:Collision
+2023-11-19 20:42:39, INFO: saclstm_episode:529, reward:-0.24, memory size:31122, time:3.50, info:Collision
+2023-11-19 20:42:39, INFO: saclstm_episode:530, reward:-0.23, memory size:31151, time:7.25, info:Collision
