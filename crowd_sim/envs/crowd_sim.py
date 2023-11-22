@@ -96,6 +96,7 @@ class CrowdSim(gym.Env):
         self.case_counter = {'train': 0, 'test': 0, 'val': 0}
         self.robot_scan_radius = config.getfloat("robot", "scan_radius")
         # configure randomized goal changing of humans midway through episode
+
         self.random_goal_changing = config.getboolean('env', 'random_goal_changing')
         if self.random_goal_changing:
             self.goal_change_chance = config.getfloat('env', 'goal_change_chance')
