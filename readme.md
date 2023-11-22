@@ -10,9 +10,6 @@ This repository contains the code for the following papers:
 - [Relational Graph Learning for Crowd Navigation, IROS, 2020](https://github.com/ChanganVR/RelationalGraphLearning).
 - [Social NCE: Contrastive Learning of Socially-aware Motion Representations, ICCV, 2021](https://github.com/vita-epfl/social-nce).
 
-More recent work in the following links
-
-- [Spatio-Temporal Transformer-Based Reinforcement Learning for Robot Crowd Navigation, ROBIO, 2023](https://arxiv.org/abs/2305.16612).
 
 ## Abstract
 
@@ -27,4 +24,3 @@ spatio-temporal semantic information, with the hope of finding the optimal navig
 spatio-temporal Transformer and self-adjusting policy entropy significantly reduce the conservatism of navigation
 policies. Experimental results demonstrate the priority of the proposed algorithm over the state-of-the-art methods.
 
-*[`Video`](https://youtu.be/TZi89cZVkPE)
