@@ -10,17 +10,3 @@ This repository contains the code for the following papers:
 - [Relational Graph Learning for Crowd Navigation, IROS, 2020](https://github.com/ChanganVR/RelationalGraphLearning).
 - [Social NCE: Contrastive Learning of Socially-aware Motion Representations, ICCV, 2021](https://github.com/vita-epfl/social-nce).
 
-
-## Abstract
-
-Ensuring robots can move safely and adhere to social norms in dynamic human environments is a crucial step towards robot
-autonomous decision-making. In existing work, double serial separate modules are generally used to capture spatial and
-temporal interactions, respectively. However, such methods lead to extra difficulties in improving the utilization of
-spatio-temporal features and reducing the conservatism of navigation policy. In light of this, this paper proposes a
-spatiotemporal transformer-based policy optimization algorithm to more effectively preserve the human-robot
-interactions. Specifically, a gated embedding mechanism is introduced to effectively fuses the spatial and temporal
-representations by integrating both modalities at the feature level. Then Transformer is leveraged to encode the
-spatio-temporal semantic information, with the hope of finding the optimal navigation policy. Finally, a combination of
-spatio-temporal Transformer and self-adjusting policy entropy significantly reduce the conservatism of navigation
-policies. Experimental results demonstrate the priority of the proposed algorithm over the state-of-the-art methods.
-
