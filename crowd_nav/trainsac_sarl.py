@@ -72,18 +72,6 @@ def main():
     policy_config.read(args.policy_config)
     env = gym.make('CrowdSim-v0')
     env.configure(env_config)
-    if args.visualize:
-        fig, ax = plt.subplots(figsize=(8, 7))
-        ax.set_xlim(-7, 7)
-        ax.set_ylim(-7, 7)
-        ax.set_xlabel('x(m)', fontsize=12, family="Times New Roman")
-        ax.set_ylabel('y(m)', fontsize=12, family="Times New Roman")
-        # plt.rcParams["font.family"] = "Times New Roman"
-        labels = ax.get_xticklabels() + ax.get_yticklabels()
-        [label.set_fontname('Times New Roman') for label in labels]
-        plt.ion()
-        env.ax = ax
-        env.fig = fig
 
     robot = Robot(env_config, 'robot')
     logging.info('Using robot policy: %s', args.policy)
@@ -101,17 +89,14 @@ def main():
         done = False
         ob = env.reset('train')
         tol_reward = 0
-        state = JointState(robot.get_full_state(), ob)
-        state = rotate(state)
+        state = rotate(JointState(robot.get_full_state(), ob))
 
         while not done:
             action = policy.predict(state, args.deterministic)
-            next_state, reward, done, info, _ = env.step(action)
+            ob, reward, done, info, _ = env.step(action)
             tol_reward += reward
-            next_state = JointState(robot.get_full_state(), next_state)
-            next_state = rotate(next_state)
+            next_state = rotate(JointState(robot.get_full_state(), ob))
             policy.replay_buffer.push(state, action, reward, next_state, done)
-            state = next_state
 
         if len(policy.replay_buffer) > 6000:
             q1_loss, q2_loss, pi_loss, alpha_loss = policy.optim_sac(training_step)

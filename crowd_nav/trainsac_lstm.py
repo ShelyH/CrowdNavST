@@ -7,6 +7,8 @@ import logging
 import argparse
 import configparser
 
+from crowd_nav.utils.info import ReachGoal
+
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 
 from tensorboardX import SummaryWriter
@@ -41,11 +43,15 @@ def main():
     # configure paths
     make_new_dir = True
     if os.path.exists(args.output_dir):
-        # key = raw_input('Output directory already exists! Overwrite the folder? (y/n)')
-        key = 'y'
-        if key == 'y' and not args.resume:
+        #
+        delete_data = 'y'
+        if delete_data == 'y' and not args.resume:
             shutil.rmtree(args.output_dir)
-            shutil.rmtree(args.log_path)
+            delete_log = raw_input('Log directory already exists! Overwrite the folder? (y/n)')
+            if delete_log == 'y':
+                shutil.rmtree(args.log_path)
+            else:
+                args.seed += 1
         else:
             make_new_dir = False
             args.env_config = os.path.join(args.output_dir, os.path.basename(args.env_config))
@@ -75,18 +81,7 @@ def main():
     policy_config.read(args.policy_config)
     env = gym.make(args.env_id)
     env.configure(env_config)
-    if args.visualize:
-        fig, ax = plt.subplots(figsize=(8, 7))
-        ax.set_xlim(-7, 7)
-        ax.set_ylim(-7, 7)
-        ax.set_xlabel('x(m)', fontsize=18, family="Times New Roman")
-        ax.set_ylabel('y(m)', fontsize=18, family="Times New Roman")
-        # plt.rcParams["font.family"] = "Times New Roman"
-        labels = ax.get_xticklabels() + ax.get_yticklabels()
-        [label.set_fontname('Times New Roman') for label in labels]
-        plt.ion()
-        env.ax = ax
-        env.fig = fig
+
     robot = Robot(env_config, 'robot')
     logging.info('Using robot policy: %s', args.policy)
     # configure policy
@@ -109,7 +104,6 @@ def main():
 
         while not done:
             action = policy.predict(state, args.deterministic)
-            # action = robot.clip_action(action, env_config.getfloat('robot', 'v_pref'))
             ob, reward, done, info, _ = env.step(action)
             tol_reward += reward
             next_state = rotate(JointState(robot.get_full_state(), ob))
@@ -122,10 +116,11 @@ def main():
             writer.add_scalar("loss/alpha_loss", scalar_value=alpha_loss, global_step=training_step)
             writer.add_scalar("loss/q1_loss", scalar_value=q1_loss, global_step=training_step)
             writer.add_scalar("loss/q2_loss", scalar_value=q2_loss, global_step=training_step)
+            writer.add_scalar("success_rate", scalar_value=int(isinstance(info, ReachGoal)), global_step=training_step)
         writer.add_scalar("reward", scalar_value=tol_reward, global_step=training_step)
         logging.info('saclstm_episode:{}, reward:{}, memory size:{}, time:{},'
-                     ' info:{}'.format(episode, ('%.2f' % tol_reward),
-                                       len(policy.replay_buffer), ('%.2f' % env.global_time), info))
+                     ' info:{}'.format(episode, ('%.2f' % tol_reward), len(policy.replay_buffer),
+                                       ('%.2f' % env.global_time), info))
         if episode % args.save_interval == 0 or episode == num_updates - 1:
             policy.save_load_model('save', args.output_dir)
         training_step += 1

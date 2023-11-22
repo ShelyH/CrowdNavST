@@ -77,33 +77,20 @@ class PolicyNetGaussian(nn.Module):
 
     def forward(self, state):
         # print(state)
-        size = state.shape  # torch.Size([1, 5, 13])
+        size = state.shape
 
         self_state = state[:, 0, :self.self_state_dim]  # torch.Size([1, 6])
         human_state = state[:, :, self.self_state_dim:]
         h0 = torch.zeros(1, size[0], self.lstm_hidden_dim)
         c0 = torch.zeros(1, size[0], self.lstm_hidden_dim)
-        # print(human_state.shape)
         output, (hn, cn) = self.lstm1(human_state, (h0, c0))
 
-        # print(output.shape) #torch.Size([1, 7, 50])
-        # print(hn.shape) # torch.Size([1, 1, 50])
-        hn = hn.squeeze(0)  # torch.Size([1, 128])
-        # print(hn.shape) # torch.Size([1, 50])
-        # output = output.squeeze(0)
-        # print(output.shape) #torch.Size([7, 50])
-        # output = torch.cat([output], dim=1)
-        # print(output.shape)
+        hn = hn.squeeze(0)
         joint_state = torch.cat([self_state, hn], dim=1)
-        # print(joint_state.shape) # torch.Size([1, 53])
-        # print(state.shape) # torch.Size([1, 5, 7])
         x = torch.relu(self.linear1(joint_state))
         x = torch.relu(self.linear2(x))
-        # state = state[:, 0, :]  # torch.Size([1, 6])
-        # print(state.shape)
         mean = self.mean_linear(x)
 
-        # mean = torch.clamp(mean, -2, 1)
         log_std = self.log_std_linear(x)
         # weights initialize
         log_std = torch.clamp(log_std, -20, 2)

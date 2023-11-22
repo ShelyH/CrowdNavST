@@ -252,8 +252,7 @@ class CrowdSim(gym.Env):
             dynamic_human_num = {1: 0.3, 2: 0.3, 3: 0.2, 4: 0.1, 5: 0.1}
             static = True if np.random.random() < 1 else False
             prob = np.random.random()
-            for key, value in sorted(
-                    static_human_num.items() if static else dynamic_human_num.items()):
+            for key, value in sorted(static_human_num.items() if static else dynamic_human_num.items()):
                 if prob - value <= 0:
                     human_num = key
                     break
@@ -582,14 +581,28 @@ class CrowdSim(gym.Env):
         import matplotlib.pyplot as plt
         from matplotlib import animation, patches
         if update:
+            fig, ax = plt.subplots(figsize=(8, 7))
+            self.ax=ax
+            ax.set_xlim(-4.9, 4.9)
+            ax.set_ylim(-4.9, 4.9)
+            plt.yticks(fontproperties='Times New Roman', size=20)
+            plt.xticks(fontproperties='Times New Roman', size=20)
+            ax.set_xlabel('x(m)', fontsize=20, family="Times New Roman")
+            ax.set_ylabel('y(m)', fontsize=20, family="Times New Roman")
+            # plt.rcParams["font.family"] = "Times New Roman"
+            labels = ax.get_xticklabels() + ax.get_yticklabels()
+            [label.set_fontname('Times New Roman') for label in labels]
+            plt.ion()
             plt.rcParams['animation.ffmpeg_path'] = '/usr/bin/ffmpeg'
             x_offset = 0.1
             y_offset = 0.1
-            robot_color = 'yellow'
-            goal_color = 'red'
-            arrow_color = 'red'
+            robot_color = 'red'
+            goal_color = 'DodgerBlue'
+            arrow_color = 'black'
             fontsize=20
-            arrow_style = patches.ArrowStyle("->", head_length=4, head_width=2)
+            arrow_style = patches.ArrowStyle("->", head_length=5.5, head_width=3)
+
+            # arrow_patch = patches.FancyArrowPatch((0, 0), (1, 1), arrowstyle=arrow_style, color='red')
             plt.rc('font', family='Times New Roman', size=fontsize)
             cmap = plt.cm.get_cmap('hsv', 10)
 
@@ -743,8 +756,8 @@ class CrowdSim(gym.Env):
             x_offset = 0.11
             y_offset = 0.11
             cmap = plt.cm.get_cmap('hsv', 10)
-            robot_color = 'yellow'
-            goal_color = 'red'
+            robot_color = 'red'
+            goal_color = 'blue'
             arrow_color = 'red'
             arrow_style = patches.ArrowStyle("->", head_length=5.5, head_width=3)
 

@@ -1,11 +1,12 @@
 import logging
 import argparse
 import configparser
-import os
+import os, sys
 
 import numpy as np
 import torch
-
+sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
+dirPath = os.path.dirname(os.path.realpath(__file__))
 import gym
 from matplotlib import pyplot as plt
 from crowd_nav.utils.info import *
@@ -23,7 +24,7 @@ def main():
     parser.add_argument('--env_config', type=str, default='configs/env.config')
     parser.add_argument('--policy_config', type=str, default='configs/policy.config')
     parser.add_argument('--policy', type=str, default='rnnsac')
-    parser.add_argument('--model_dir', type=str, default='../data/output')
+    parser.add_argument('--model_dir', type=str, default='data/output')
     parser.add_argument('--gpu', default=False, action='store_true')
     parser.add_argument('--visualize', default=True, action='store_true')
     parser.add_argument('--env_update', default=True, action='store_true')
@@ -52,18 +53,7 @@ def main():
     env_config.read(env_config_file)
     env = gym.make('CrowdSim-v0')
     env.configure(env_config)
-    if args.visualize:
-        fig, ax = plt.subplots(figsize=(8, 7))
-        ax.set_xlim(-7, 7)
-        ax.set_ylim(-7, 7)
-        ax.set_xlabel('x(m)', fontsize=12, family="Times New Roman")
-        ax.set_ylabel('y(m)', fontsize=12, family="Times New Roman")
-        # plt.rcParams["font.family"] = "Times New Roman"
-        labels = ax.get_xticklabels() + ax.get_yticklabels()
-        [label.set_fontname('Times New Roman') for label in labels]
-        plt.ion()
-        env.ax = ax
-        env.fig = fig
+
     policy_config = configparser.RawConfigParser()
     policy_config.read(policy_config_file)
     policy = policy_factory[args.policy](env.action_space.shape[0],

@@ -4,6 +4,8 @@ import traceback
 import os
 import sys
 
+from matplotlib.ticker import MultipleLocator
+
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 
 import seaborn as sns
@@ -21,14 +23,13 @@ DEFAULT_SIZE_GUIDANCE = {
     "scalars": 0,
     "tensors": 0,
 }
+fontsize = 20
+flatui = ["#DC143C", "#2926AB", "#9b59b6", "#2ecc71", "#34495e", "#2ecc71", "#e67e22", "#f1c40f"]
 
-flatui = ["#EF5D0B", "#2926AB", "#9b59b6", "#2ecc71",
-          "#34495e", "#2ecc71", "#e67e22", "#f1c40f"]
+material = ["#FFC0CB", "#E91E63", "#9C27B0", "#607D8B", "#2196F3", "#009688", "#795548", "#607D8B"]
 
-material = ["#FFC107", "#E91E63", "#9C27B0", "#607D8B",
-            "#2196F3", "#009688", "#795548", "#607D8B"]
-
-sns.set(style="white", font_scale=1.0, rc={"lines.linewidth": 1.2}, palette=sns.color_palette(flatui), color_codes=False)
+sns.set(style="white", font_scale=1.0, rc={"lines.linewidth": 1.2}, palette=sns.color_palette(flatui),
+        color_codes=False)
 
 
 def plot_data(data, x_axis='num episodes', y_axis="SAC_exp1", hue="algorithm", smooth=1, ax=None, **kwargs):
@@ -40,7 +41,7 @@ def plot_data(data, x_axis='num episodes', y_axis="SAC_exp1", hue="algorithm", s
         where the "smooth" param is width of that window (2k+1)
         """
         y = np.ones(smooth)
-
+        # print(data)
         for datum in data:
             x = np.asarray(datum[y_axis])
             z = np.ones(len(x))
@@ -50,36 +51,39 @@ def plot_data(data, x_axis='num episodes', y_axis="SAC_exp1", hue="algorithm", s
     if isinstance(data, list):
         data = pd.concat(data, ignore_index=True, sort=True)
 
-    sns.lineplot(data=data, x=x_axis, y=y_axis, hue=hue, ci='sd', ax=ax, **kwargs)
+    sns.lineplot(data=data, x=x_axis, y=y_axis, hue=hue, errorbar='sd', ax=ax, err_kws={'linewidth': 0}, **kwargs)
     handles, labels = ax.get_legend_handles_labels()
     ax.legend(loc='lower right', handles=handles[0:], labels=labels[0:], prop={'size': 14, 'family': 'Times New Roman'})
-    # ax.legend()
-    """Spining up style"""
-    ax.grid(True, alpha=0.4)
+
+    """Spinning up style"""
+    ax.grid(True, alpha=0.5)
     # ax.legend(loc='upper right', ncol=9, handlelength=1, frameon=False,
     #           mode="expand", borderaxespad=0.02, prop={'size': 8})
 
     labels = ax.get_xticklabels() + ax.get_yticklabels()
     [label.set_fontname('Times New Roman') for label in labels]
-    plt.tight_layout(pad=1.2)
-    plt.xlabel("Episodes", fontproperties='Times New Roman')
-    plt.ylabel("Reward", fontproperties='Times New Roman')
-    plt.xticks(fontsize=12)
-    plt.yticks(fontsize=12)
+    plt.tight_layout(pad=2)
+    ax.yaxis.set_major_locator(MultipleLocator(0.1))
+    plt.gcf().subplots_adjust(left=0.15)
+
+    plt.xlabel("Episodes", fontsize=fontsize, fontproperties='Times New Roman')
+    plt.ylabel("Success rate", fontsize=fontsize, fontproperties='Times New Roman')
+    plt.xticks(fontsize=fontsize)
+    plt.yticks(fontsize=fontsize)
     # plt.grid = True
     xscale = np.max(np.asarray(data[x_axis])) > 5e3
     if xscale:
         # Just some formatting niceness: x-axis scale in scientific notation if max x is large
-        ax.ticklabel_format(style='sci', axis='x', scilimits=(0, 0), prop={'size': 14, 'family': 'Times New Roman'})
+        ax.ticklabel_format(style='sci', axis='x', scilimits=(0, 0))
 
 
-def load_event_scalars(log_path):
-    feature = log_path.split(os.sep)[-1]
-    print(f"Processing logfile: {os.path.abspath(log_path)}")
-    if feature.find("_") != -1:
-        feature = feature.split("_")[-1]
+def load_event_scalars(log_path, feature):
+    # feature = log_path.split(os.sep)[-1]
+    # print(f"Processing logfile: {os.path.abspath(log_path)}")
+    # if feature.find("_") != -1:
+    #     feature = feature.split("_")[-1]
     # print(feature)
-    feature = 'reward'
+    # feature="success_rate"
     df = pd.DataFrame()
     try:
         event_acc = EventAccumulator(log_path, DEFAULT_SIZE_GUIDANCE)
@@ -91,7 +95,7 @@ def load_event_scalars(log_path):
             tags = event_acc.Tags()["tensors"]
             env_list = event_acc.tensors.Items
             use_tensorflow = True
-        for tag in set(tags) & {"total reward", "reward", "min reward", "max reward", "num steps"}:
+        for tag in set(tags) & {feature}:
             event_list = env_list(tag)
             # if use_tensorflow:
             #     values = list(map(lambda x: float(tf.make_ndarray(x.tensor_proto)), event_list))
@@ -108,18 +112,16 @@ def load_event_scalars(log_path):
     return df
 
 
-def get_env_alg_log(log_path):
+def get_env_alg_log(log_path, y_ax):
     """
     split Environment log by algorithm
     :param log_path:
     :return:
     """
     alg = log_path.split(os.sep)[-1]
-    # print(alg)
+
     if alg.find("_") != -1:
         alg = alg.rsplit("_", maxsplit=1)[0]
-
-    # print(alg)
 
     def env_alg_fulldir(x):
         return os.path.join(log_path, x)
@@ -127,30 +129,29 @@ def get_env_alg_log(log_path):
     alg_features = [env_alg_fulldir(fea) for fea in os.listdir(log_path) if os.path.isdir(env_alg_fulldir(fea))]
     # print(alg_features)
     if alg_features:
-        df = pd.concat([load_event_scalars(feature) for feature in alg_features], axis=1)
+        df = pd.concat([load_event_scalars(feature, y_ax) for feature in alg_features], axis=1)
     else:
-        df = load_event_scalars(log_path)
-    # print(df)
+        df = load_event_scalars(log_path, y_ax)
+
     df["num episodes"] = np.arange(1, df.shape[0] + 1)
     df["algorithm"] = [alg] * df.shape[0]
-    # print(alg)
+
     return df
 
 
-def plot_all_logs(log_dir=None, x_axis=None, y_axis=None, hue=None, smooth=1, env_filter_func=None, alg_filter_func=None):
-    if y_axis is None:
-        y_axis = ['min reward', 'average reward', 'max reward', 'total reward']
+def plot_all_logs(log_dir=None, x_axis=None, y_axis=None, hue=None, smooth=1, env_filter_func=None,
+                  alg_filter_func=None):
 
-    basedir = os.path.dirname(log_dir)  # ../log/
+    if y_axis is None:
+        y_axis = ['min reward', 'average reward', 'max reward', 'total reward', 'success_rate']
+    basedir = os.path.dirname(log_dir)
 
     def fulldir(x):
-        return os.path.join(basedir, x)  # ../log/Ant-v3/
+        return os.path.join(basedir, x)
 
-    envs_logdirs = sorted(
-        [fulldir(x) for x in os.listdir(basedir) if os.path.isdir(fulldir(x))])  # [../log/Ant-v3/, ../log/Hopper-v3/]
+    envs_logdirs = sorted([fulldir(x) for x in os.listdir(basedir) if os.path.isdir(fulldir(x))])
     if env_filter_func:
         envs_logdirs = sorted(filter(env_filter_func, envs_logdirs))
-    print("All envs are: ", list(map(os.path.abspath, envs_logdirs)))
 
     num_envs = len(envs_logdirs)
     sub_plot_height = round(math.sqrt(num_envs))
@@ -161,8 +162,8 @@ def plot_all_logs(log_dir=None, x_axis=None, y_axis=None, hue=None, smooth=1, en
 
     for y_ax in y_axis:
         k = 0
-        fig, axes = plt.subplots(sub_plot_height, sub_plot_width, figsize=(
-            8 * sub_plot_width, 6 * sub_plot_height))
+        fig, axes = plt.subplots(sub_plot_height, sub_plot_width, figsize=(8 * sub_plot_width, 6 * sub_plot_height))
+
         for env_dir in envs_logdirs:
             if sub_plot_height == 1:
                 if sub_plot_width == 1:
@@ -175,28 +176,28 @@ def plot_all_logs(log_dir=None, x_axis=None, y_axis=None, hue=None, smooth=1, en
             env_id = env_dir.split(os.sep)[-1]
             env_alg_dirs = sorted(
                 filter(os.path.isdir, [envs_fulldir(env_dir, alg_dir) for alg_dir in os.listdir(env_dir)]))
-            # print(alg_filter_func, env_alg_dirs)
+
             if alg_filter_func:
                 env_alg_dirs = sorted(filter(alg_filter_func, env_alg_dirs))
+
             print(f"Env id: {env_id}, logs: {list(map(os.path.abspath, env_alg_dirs))}")
 
-            env_log_df = [get_env_alg_log(env_alg_dir) for env_alg_dir in env_alg_dirs]
-            # print(env_log_df)
-            make_plot(data=env_log_df, x_axis=x_axis, y_axis=y_ax,
-                      smooth=smooth, title=env_id, hue=hue, ax=ax)
+            env_log_df = [get_env_alg_log(env_alg_dir, y_ax) for env_alg_dir in env_alg_dirs]
+
+            make_plot(data=env_log_df, x_axis=x_axis, y_axis=y_ax, smooth=smooth, title=env_id, hue=hue, ax=ax)
             k += 1
+
     plt.show()
     # plt.savefig("../Algorithms/images/bench_trpo_tf2.png")
 
 
 def make_plot(data, x_axis=None, y_axis=None, title=None, hue=None, smooth=1, estimator='mean', ax=None):
     estimator = getattr(np, estimator)
+
     if len(data) > 0:
-        # print(crossTF99.6%)
-        plot_data(data, x_axis=x_axis, y_axis=y_axis, hue=hue,
-                  smooth=smooth, ax=ax, estimator=estimator)
+        plot_data(data, x_axis=x_axis, y_axis=y_axis, hue=hue, smooth=smooth, ax=ax, estimator=estimator)
     if title:
-        ax.set_title(title, fontdict={'family': 'Times New Roman', 'size': 15})
+        ax.set_title(title, fontdict={'family': 'Times New Roman', 'size': fontsize})
 
 
 # @click.command()
@@ -204,7 +205,7 @@ def make_plot(data, x_axis=None, y_axis=None, title=None, hue=None, smooth=1, es
 # @click.option("--x_axis", type=str, default="num episodes", help="X axis crossTF99.6%")
 # @click.option("--y_axis", type=list, default=["SAC_exp1"], help="Y axis crossTF99.6%(can be multiple)")
 # @click.option("--hue", type=str, default="algorithm", help="Hue for legend")
-def main(log_dir='/home/hhd/PycharmProjects/CrowdNavRL/crowd_nav/log/', x_axis='num episodes', y_axis=None, hue='algorithm',
+def main(log_dir='../data/log/', x_axis='num episodes', y_axis=None, hue='algorithm',
          env_filter_func=None, alg_filter_func=None):
     """plot performance of all environments and algorithms
 
@@ -220,18 +221,15 @@ def main(log_dir='/home/hhd/PycharmProjects/CrowdNavRL/crowd_nav/log/', x_axis='
         alg_filter_func ([type], optional): Filter function to select algorithms. Defaults to None.
     """
     if y_axis is None:
-        y_axis = ['reward']
+        y_axis = ["success_rate"]
     plot_all_logs(log_dir=log_dir, x_axis=x_axis, y_axis=y_axis, hue=hue,
-                  smooth=5000, env_filter_func=env_filter_func, alg_filter_func=alg_filter_func)
+                  smooth=1000, env_filter_func=env_filter_func, alg_filter_func=alg_filter_func)
 
 
 if __name__ == "__main__":
-    def env_filter_func_pg(x): return x.split(os.sep)[-1] in ["CrowdSim-v0"]
+    def env_filter_func_pg(x): return x.split(os.sep)[-1] in ["CrowdSimstemporal-v0"]
 
+    def alg_filter_func(x): return x.split(os.sep)[-1].rsplit("_")[0] in ["DSRNN", "STTFSAC(Ours)", "saclstm", "SARL"]
 
-    def alg_filter_func(x): return x.split(os.sep)[-1].rsplit("_")[0] in ["DSRNN", "STTFSAC(Ours)", "SAC-LSTM", "SARL"]
-
-
-    # print(alg_filter_func())
     main(env_filter_func=None, alg_filter_func=alg_filter_func)
     sns.despine()
