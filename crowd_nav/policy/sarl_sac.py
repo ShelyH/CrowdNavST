@@ -45,11 +45,10 @@ class DQFunc(nn.Module):
         self.Q2 = nn.Linear(hidden_size, 1)
 
     def forward(self, state, action):
-        size = state.shape  # torch.Size([?, 4, 12])
-        # print(spatial_edges)
+        size = state.shape
         self_state = state[:, 0, :self.self_state_dim]
-        mlp1_output = self.mlp1(state.view((-1, size[2])))  # torch.Size([4, 100])
-        mlp2_output = self.mlp2(mlp1_output)  # torch.Size([4*?, 50])
+        mlp1_output = self.mlp1(state.view((-1, size[2])))
+        mlp2_output = self.mlp2(mlp1_output)
 
         global_state = torch.mean(mlp1_output.view(size[0], size[1], -1), 1, keepdim=True)
         global_state = global_state.expand((size[0], size[1], self.global_state_dim)). \
@@ -65,14 +64,12 @@ class DQFunc(nn.Module):
 
         weights = softmax(scores, dim=1).unsqueeze(2)
         self.attention_weights = weights[0, :, 0].data.cpu().numpy()
-
         # output feature is a linear combination of input features
         features = mlp2_output.view(size[0], size[1], -1)
         # for converting to onnx
-        weighted_feature = torch.sum(torch.mul(weights, features), dim=1)  # torch.Size([?, 8])
-
+        weighted_feature = torch.sum(torch.mul(weights, features), dim=1)
         joint_state = torch.cat([self_state, weighted_feature], dim=1)
-        # print(state.shape, action.shape)
+
         x = torch.cat([joint_state, action], -1)
         x = torch.tanh(self.linear1(x))
         x = torch.tanh(self.linear2(x))
@@ -99,14 +96,10 @@ class PolicyNetGaussian(nn.Module):
 
     def forward(self, state):
         self_state = state[:, 0, :self.self_state_dim]
-        # print(state.view((-1, size[2])).shape)
         human_state = state[:, :, self.self_state_dim:]
-        size = human_state.shape  # torch.Size([?, 4, 12])
-        # print(human_state.shape)
-        mlp1_output = self.mlp1(human_state.view((-1, size[2])))  # torch.Size([4, 100])
-        mlp2_output = self.mlp2(mlp1_output)  # torch.Size([4*?, 50])
-        # print(mlp1_output.shape)
-        # attention_input = mlp1_output
+        size = human_state.shape
+        mlp1_output = self.mlp1(human_state.view((-1, size[2])))
+        mlp2_output = self.mlp2(mlp1_output)
         global_state = torch.mean(mlp1_output.view(size[0], size[1], -1), 1, keepdim=True)
 
         global_state = global_state.expand((size[0], size[1], self.global_state_dim)). \
@@ -126,20 +119,12 @@ class PolicyNetGaussian(nn.Module):
         # output feature is a linear combination of input features
         features = mlp2_output.view(size[0], size[1], -1)
         # for converting to onnx
-        # print(weights.shape,features.shape) # torch.Size([1, 4, 1]) torch.Size([1, 4, 8])
-        weighted_feature = torch.sum(torch.mul(weights, features), dim=1)  # torch.Size([?, 8])
-        # print(self_state.shape,weighted_feature.shape) # torch.Size([1, 7]) torch.Size([1, 8])
+        weighted_feature = torch.sum(torch.mul(weights, features), dim=1)
         joint_state = torch.cat([self_state, weighted_feature], dim=1)
-
         x = torch.relu(self.linear1(joint_state))
         x = torch.relu(self.linear2(x))
-        # state = state[:, 0, :]  # torch.Size([1, 6])
-
         mean = self.mean_linear(x)
-
-        # mean = torch.clamp(mean, -2, 1)
         log_std = self.log_std_linear(x)
-        # weights initialize
         log_std = torch.clamp(log_std, -20, 2)
 
         return mean, log_std
@@ -155,7 +140,6 @@ class PolicyNetGaussian(nn.Module):
             position_x = dist.rsample()
         A_ = torch.tanh(position_x)
         log_prob = dist.log_prob(position_x) - torch.log(1 - A_.pow(2) + 1e-6)
-        # print(A_.shape)
         return A_, log_prob.sum(1, keepdim=True), torch.tanh(a_mean)
 
 
@@ -283,7 +267,7 @@ class SARLSAC(MultiHumanRL):
     def save_load_model(self, op, path):
         actor_net_path = path + "/A_SAC.pt"
         critic_net_path = path + "/C_SAC.pt"
-        # print(actor_net_path)
+
         if op == "save":
             torch.save(self.critic.state_dict(), critic_net_path)
             torch.save(self.actor.state_dict(), actor_net_path)
@@ -291,4 +275,4 @@ class SARLSAC(MultiHumanRL):
             self.critic.load_state_dict(torch.load(critic_net_path))
             self.c_net_target.load_state_dict(torch.load(critic_net_path))
             self.actor.load_state_dict(torch.load(actor_net_path))
-        # print(self.actor.state_dict())
+

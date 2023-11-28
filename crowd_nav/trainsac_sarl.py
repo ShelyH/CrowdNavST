@@ -7,6 +7,8 @@ import logging
 import argparse
 import configparser
 
+from past.builtins import raw_input
+
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 
 from tensorboardX import SummaryWriter
@@ -21,28 +23,35 @@ dirPath = os.path.dirname(os.path.realpath(__file__))
 
 def main():
     parser = argparse.ArgumentParser('Parse configuration file')
-    parser.add_argument('--output_dir', type=str, default='data/output')
     parser.add_argument('--policy', type=str, default='sarl_sac')
-    parser.add_argument('--env_config', type=str, default='configs/env.config')
-    parser.add_argument('--policy_config', type=str, default='configs/policy.config')
-    parser.add_argument('--train_config', type=str, default='configs/train.config')
-    parser.add_argument('--resume', default=False, action='store_true')
-    parser.add_argument('--gpu', default=False, action='store_true')
+    parser.add_argument('--batch_size', default=128, type=int)
+    parser.add_argument('--save_interval', type=int, default=100)
+    parser.add_argument('--gpu', default=True, action='store_true')
     parser.add_argument('--debug', default=False, action='store_true')
-    parser.add_argument("--env_name", default="CrowdSim-v0")  # OpenAI gym environment name
-    parser.add_argument('--batch_size', default=128, type=int)  # mini batch size
-    parser.add_argument('--save_interval', type=int, default=50)
+    parser.add_argument('--resume', default=False, action='store_true')
+    parser.add_argument('--output_dir', type=str, default='data/output')
+    parser.add_argument('--visualize', default=False, action='store_true')
     parser.add_argument('--deterministic', default=False, action='store_true')
-    parser.add_argument('--visualize', default=True, action='store_true')
+    parser.add_argument('--env_config', type=str, default='configs/env.config')
+    parser.add_argument("--seed", type=int, default=0, help="Seed for reproducing")
+    parser.add_argument('--train_config', type=str, default='configs/train.config')
+    parser.add_argument('--policy_config', type=str, default='configs/policy.config')
+    parser.add_argument("--env_id", type=str, default="CrowdSim-v0", help="Environment Id")
+    parser.add_argument('--log_path', type=str, default='data/log/', help="Directory to save logs")
     args = parser.parse_args()
     # configure paths
     make_new_dir = True
 
     if os.path.exists(args.output_dir):
         # key = raw_input('Output directory already exists! Overwrite the folder? (y/n)')
-        key = 'y'
-        if key == 'y' and not args.resume:
+        delete_data = 'y'
+        if delete_data == 'y' and not args.resume:
             shutil.rmtree(args.output_dir)
+            delete_log = raw_input('Log directory already exists! Overwrite the folder? (y/n)')
+            if delete_log == 'y':
+                shutil.rmtree(args.log_path)
+            else:
+                args.seed += 1
         else:
             make_new_dir = False
             args.env_config = os.path.join(args.output_dir, os.path.basename(args.env_config))
@@ -54,7 +63,8 @@ def main():
         shutil.copy(args.policy_config, args.output_dir)
         shutil.copy(args.train_config, args.output_dir)
     log_file = os.path.join(args.output_dir, 'output.log')
-    writer = SummaryWriter(args.output_dir)
+    base_dir = args.log_path + args.env_id + "/sacsarl_exp{}".format(args.seed)
+    writer = SummaryWriter(base_dir)
     # configure logging
     mode = 'a' if args.resume else 'w'
     file_handler = logging.FileHandler(log_file, mode=mode)

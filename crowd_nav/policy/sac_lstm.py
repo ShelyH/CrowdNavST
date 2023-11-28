@@ -1,16 +1,12 @@
 import copy
-
+import logging
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.distributions import Normal
-
 from crowd_nav.policy.multi_human_rl import MultiHumanRL
-from crowd_nav.utils.utils_sac import ReplayPool, rotate, ReplayBuffer
-
-gpu_is_True = False
-device = torch.device("cuda" if torch.cuda.is_available() and gpu_is_True else "cpu")
+from crowd_nav.utils.utils_sac import ReplayBuffer
 
 
 class MLP(nn.Module):
@@ -29,26 +25,26 @@ class MLP(nn.Module):
 
 
 class DQFunc(nn.Module):
-    def __init__(self, human_dim, action_dim, hidden_size, lstm_hidden_dim, self_state_dim):
+    def __init__(self, human_dim, action_dim, hidden_size, lstm_hidden_dim, self_state_dim, device):
         super(DQFunc, self).__init__()
-
+        self.device = device
         self.action_dim = action_dim
         self.self_state_dim = self_state_dim
         self.lstm_hidden_dim = lstm_hidden_dim
 
-        self.lstm = nn.LSTM(human_dim, lstm_hidden_dim, batch_first=True)
-        self.linear1 = nn.Linear(action_dim + lstm_hidden_dim + self_state_dim, hidden_size)
-        self.linear2 = nn.Linear(hidden_size, hidden_size)
-        self.network1 = nn.Linear(hidden_size, 1)
-        self.network2 = nn.Linear(hidden_size, 1)
+        self.lstm = nn.LSTM(human_dim, lstm_hidden_dim, batch_first=True).to(self.device)
+        self.linear1 = nn.Linear(action_dim + lstm_hidden_dim + self_state_dim, hidden_size).to(self.device)
+        self.linear2 = nn.Linear(hidden_size, hidden_size).to(self.device)
+        self.network1 = nn.Linear(hidden_size, 1).to(self.device)
+        self.network2 = nn.Linear(hidden_size, 1).to(self.device)
 
     def forward(self, state, action):
         size = state.shape
 
         self_state = state[:, 0, :self.self_state_dim]
         human_state = state[:, :, self.self_state_dim:]
-        h0 = torch.zeros(1, size[0], self.lstm_hidden_dim)
-        c0 = torch.zeros(1, size[0], self.lstm_hidden_dim)
+        h0 = torch.zeros(1, size[0], self.lstm_hidden_dim).to(self.device)
+        c0 = torch.zeros(1, size[0], self.lstm_hidden_dim).to(self.device)
         output, (hn, cn) = self.lstm(human_state, (h0, c0))
         hn = hn.squeeze(0)
         joint_state = torch.cat([hn, self_state], dim=1)
@@ -63,36 +59,32 @@ class DQFunc(nn.Module):
 
 
 class PolicyNetGaussian(nn.Module):
-    def __init__(self, human_dim, action_dim, hidden_size, self_state_dim, lstm_hidden_dim):
+    def __init__(self, human_dim, action_dim, hidden_size, self_state_dim, lstm_hidden_dim, device):
         super(PolicyNetGaussian, self).__init__()
         self.self_state_dim = self_state_dim
         self.lstm_hidden_dim = lstm_hidden_dim
-        # print(state_dim,self_state_dim)
-        self.lstm1 = nn.LSTM(human_dim, lstm_hidden_dim, batch_first=True)
-        self.linear1 = nn.Linear(lstm_hidden_dim + self_state_dim, hidden_size)
-        self.linear2 = nn.Linear(hidden_size, hidden_size)
-
-        self.mean_linear = nn.Linear(hidden_size, action_dim)
-        self.log_std_linear = nn.Linear(hidden_size, action_dim)
+        self.device = device
+        self.lstm1 = nn.LSTM(human_dim, lstm_hidden_dim, batch_first=True).to(self.device)
+        self.linear1 = nn.Linear(lstm_hidden_dim + self_state_dim, hidden_size).to(self.device)
+        self.linear2 = nn.Linear(hidden_size, hidden_size).to(self.device)
+        self.mean_linear = nn.Linear(hidden_size, action_dim).to(self.device)
+        self.log_std_linear = nn.Linear(hidden_size, action_dim).to(self.device)
 
     def forward(self, state):
-        # print(state)
         size = state.shape
 
-        self_state = state[:, 0, :self.self_state_dim]  # torch.Size([1, 6])
+        self_state = state[:, 0, :self.self_state_dim]
         human_state = state[:, :, self.self_state_dim:]
-        h0 = torch.zeros(1, size[0], self.lstm_hidden_dim)
-        c0 = torch.zeros(1, size[0], self.lstm_hidden_dim)
-        output, (hn, cn) = self.lstm1(human_state, (h0, c0))
+        h0 = torch.zeros(1, size[0], self.lstm_hidden_dim).to(self.device)
+        c0 = torch.zeros(1, size[0], self.lstm_hidden_dim).to(self.device)
 
+        output, (hn, cn) = self.lstm1(human_state, (h0, c0))
         hn = hn.squeeze(0)
         joint_state = torch.cat([self_state, hn], dim=1)
         x = torch.relu(self.linear1(joint_state))
         x = torch.relu(self.linear2(x))
         mean = self.mean_linear(x)
-
         log_std = self.log_std_linear(x)
-        # weights initialize
         log_std = torch.clamp(log_std, -20, 2)
 
         return mean, log_std
@@ -107,20 +99,18 @@ class PolicyNetGaussian(nn.Module):
         else:
             position_x = dist.rsample()
         A_ = torch.tanh(position_x)
-
         log_prob = dist.log_prob(position_x) - torch.log(1 - A_.pow(2) + 1e-6)
 
         return A_, log_prob.sum(1, keepdim=True), torch.tanh(a_mean)
 
 
 class RNNSAC(MultiHumanRL):
-    def __init__(self, action_dim, state_dim, capacity, batchsize, lr=5e-4, gamma=0.99,
-                 tau=0.005, hidden_size=256, lstm_hidden_dim=128, update_interval=1,
-                 self_state_dim=5, reward_scale=100, target_entropy=None):
-        # self.multiagent_training = None
+    def __init__(self, action_dim, capacity, batchsize, lr=5e-4, gamma=0.99, tau=0.005, hidden_size=256,
+                 lstm_hidden_dim=128, update_interval=1, reward_scale=100, target_entropy=None, device=None):
         super(MultiHumanRL, self).__init__()
         self.gamma = gamma
         self.tau = tau
+        self.device = device
         self.self_state_dim = 7
         self.human_state_dim = 7
         self.batchsize = batchsize
@@ -129,9 +119,9 @@ class RNNSAC(MultiHumanRL):
         self.target_entropy = target_entropy if target_entropy else -action_dim
         # torch.manual_seed(seed)
         # aka critic
-        self.qfunsac = DQFunc(self.human_state_dim, action_dim, hidden_size,
-                              lstm_hidden_dim, self.self_state_dim).to(device)
-        self.target_q = copy.deepcopy(self.qfunsac)
+        self.qfunsac = DQFunc(self.human_state_dim, action_dim, hidden_size, lstm_hidden_dim, self.self_state_dim,
+                              self.device)
+        self.target_q = copy.deepcopy(self.qfunsac).to(self.device)
         self.critic = self.qfunsac
         self.c_net_target = self.target_q
         self.target_q.eval()
@@ -139,20 +129,25 @@ class RNNSAC(MultiHumanRL):
             p.requires_grad = False
 
         # aka actor
-        self.policynet = PolicyNetGaussian(self.human_state_dim, action_dim, hidden_size,
-                                           self.self_state_dim, lstm_hidden_dim)
+        self.policynet = PolicyNetGaussian(self.human_state_dim, action_dim, hidden_size, self.self_state_dim,
+                                           lstm_hidden_dim, self.device)
         self.actor = self.policynet
         # aka temperature
-        self.log_alpha = torch.zeros(1, requires_grad=True, device=device)
+        self.log_alpha = torch.zeros(1, requires_grad=True, device=self.device)
         self.q_optimizer = torch.optim.Adam(self.qfunsac.parameters(), lr=lr)
         self.policy_optimizer = torch.optim.Adam(self.policynet.parameters(), lr=lr)
         self.temp_optimizer = torch.optim.Adam([self.log_alpha], lr=0.005)
         self.replay_buffer = ReplayBuffer(capacity)
         self.hard_update()
 
+    def configure(self, config):
+        self.set_common_parameters(config)
+        self.multiagent_training = config.getboolean('sac_rnn_tf', 'multiagent_training')
+        logging.info('Policy: LSTM-SAC')
+
     def predict(self, state, deterministic):
         with torch.no_grad():
-            state = torch.FloatTensor(state).unsqueeze(0)
+            state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
             action, _, _ = self.policynet.sample(state, deterministic)
 
         return action
@@ -160,11 +155,11 @@ class RNNSAC(MultiHumanRL):
     def optim_sac(self, update):
         q1_loss, q2_loss, pi_loss, alpha_loss = 0, 0, 0, 0
         state, action, reward, next_state, done = self.replay_buffer.sample(self.batchsize)
-        state_batch = torch.FloatTensor(state)
-        nextstate_batch = torch.FloatTensor(next_state)
-        action_batch = torch.FloatTensor(action)
-        reward_batch = torch.FloatTensor(reward).unsqueeze(1)
-        done_batch = torch.FloatTensor(np.float32(done)).unsqueeze(1)
+        state_batch = torch.FloatTensor(state).to(self.device)
+        nextstate_batch = torch.FloatTensor(next_state).to(self.device)
+        action_batch = torch.FloatTensor(action).to(self.device)
+        reward_batch = torch.FloatTensor(reward).unsqueeze(1).to(self.device)
+        done_batch = torch.FloatTensor(np.float32(done)).unsqueeze(1).to(self.device)
 
         # update q-funcs
         with torch.no_grad():
@@ -236,4 +231,3 @@ class RNNSAC(MultiHumanRL):
             self.critic.load_state_dict(torch.load(critic_net_path))
             self.c_net_target.load_state_dict(torch.load(critic_net_path))
             self.actor.load_state_dict(torch.load(actor_net_path))
-        # print(self.actor)

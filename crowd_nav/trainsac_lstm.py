@@ -27,7 +27,7 @@ def main():
     parser.add_argument('--policy', type=str, default='rnnsac')
     parser.add_argument('--batch_size', default=128, type=int)
     parser.add_argument('--save_interval', type=int, default=100)
-    parser.add_argument('--gpu', default=False, action='store_true')
+    parser.add_argument('--gpu', default=True, action='store_true')
     parser.add_argument('--debug', default=False, action='store_true')
     parser.add_argument('--resume', default=False, action='store_true')
     parser.add_argument('--output_dir', type=str, default='data/output')
@@ -43,7 +43,6 @@ def main():
     # configure paths
     make_new_dir = True
     if os.path.exists(args.output_dir):
-        #
         delete_data = 'y'
         if delete_data == 'y' and not args.resume:
             shutil.rmtree(args.output_dir)
@@ -81,16 +80,16 @@ def main():
     policy_config.read(args.policy_config)
     env = gym.make(args.env_id)
     env.configure(env_config)
-
     robot = Robot(env_config, 'robot')
-    logging.info('Using robot policy: %s', args.policy)
+
     # configure policy
     policy = policy_factory[args.policy](env.action_space.shape[0],
-                                         env.state_space.shape[0] - 5 * env_config.getint('sim', 'human_num') + 3,
                                          policy_config.getint('sac_rl', 'capacity'),
-                                         policy_config.getint('sac_rl', 'batchsize'))
+                                         policy_config.getint('sac_rl', 'batchsize'),
+                                         device=device)
     policy.configure(policy_config)
     robot.set_policy(policy)
+
     env.set_robot(robot)
     training_step = 0
     num_updates = 50000

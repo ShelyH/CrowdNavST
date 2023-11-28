@@ -582,16 +582,14 @@ class CrowdSim(gym.Env):
         import matplotlib.pyplot as plt
         from matplotlib import animation, patches
         if update:
-            fig, ax = plt.subplots(figsize=(8, 7))
-            self.ax=ax
-            ax.set_xlim(-4.9, 4.9)
-            ax.set_ylim(-4.9, 4.9)
+            self.ax.set_xlim(-4.9, 4.9)
+            self.ax.set_ylim(-4.9, 4.9)
             plt.yticks(fontproperties='Times New Roman', size=20)
             plt.xticks(fontproperties='Times New Roman', size=20)
-            ax.set_xlabel('x(m)', fontsize=20, family="Times New Roman")
-            ax.set_ylabel('y(m)', fontsize=20, family="Times New Roman")
+            self.ax.set_xlabel('x(m)', fontsize=20, family="Times New Roman")
+            self.ax.set_ylabel('y(m)', fontsize=20, family="Times New Roman")
             # plt.rcParams["font.family"] = "Times New Roman"
-            labels = ax.get_xticklabels() + ax.get_yticklabels()
+            labels = self.ax.get_xticklabels() + self.ax.get_yticklabels()
             [label.set_fontname('Times New Roman') for label in labels]
             plt.ion()
             plt.rcParams['animation.ffmpeg_path'] = '/usr/bin/ffmpeg'
