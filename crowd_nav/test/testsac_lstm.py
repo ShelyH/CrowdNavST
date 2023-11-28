@@ -26,7 +26,7 @@ def main():
     parser.add_argument('--policy', type=str, default='rnnsac')
     parser.add_argument('--model_dir', type=str, default='../data/output')
     parser.add_argument('--gpu', default=False, action='store_true')
-    parser.add_argument('--visualize', default=True, action='store_true')
+    parser.add_argument('--visualize', default=False, action='store_true')
     parser.add_argument('--env_update', default=True, action='store_true')
     parser.add_argument('--phase', type=str, default='test')
     parser.add_argument('--test_case', type=int, default=None)
@@ -88,8 +88,6 @@ def main():
     robot.set_policy(policy)
     env.set_robot(robot)
 
-    # policy.set_phase(args.phase)
-    # policy.set_device(device)
     # set safety space for ORCA in non-cooperative simulation
     if isinstance(robot.policy, ORCA):
         if robot.visible:
@@ -100,7 +98,6 @@ def main():
             robot.policy.safety_space = 0
         logging.info('ORCA agent buffer: %f', robot.policy.safety_space)
 
-    # policy.set_env(env)
     robot.print_info()
     success_rate = 0
     collision_rate = 0
