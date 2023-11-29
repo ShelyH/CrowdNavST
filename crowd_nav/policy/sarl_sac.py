@@ -48,6 +48,7 @@ class DQFunc(nn.Module):
         size = state.shape
         self_state = state[:, 0, :self.self_state_dim]
         mlp1_output = self.mlp1(state.view((-1, size[2])))
+
         mlp2_output = self.mlp2(mlp1_output)
 
         global_state = torch.mean(mlp1_output.view(size[0], size[1], -1), 1, keepdim=True)
@@ -100,6 +101,7 @@ class PolicyNetGaussian(nn.Module):
         size = human_state.shape
         mlp1_output = self.mlp1(human_state.view((-1, size[2])))
         mlp2_output = self.mlp2(mlp1_output)
+        # print(mlp2_output.shape)
         global_state = torch.mean(mlp1_output.view(size[0], size[1], -1), 1, keepdim=True)
 
         global_state = global_state.expand((size[0], size[1], self.global_state_dim)). \

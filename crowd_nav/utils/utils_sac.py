@@ -113,7 +113,7 @@ def rotate_s(state):
     da = torch.norm(torch.cat([(batch_states[:, 0] - batch_states[:, 9]).reshape((batch, -1)),
                                (batch_states[:, 1] - batch_states[:, 10]).reshape((batch, -1))],
                               dim=1), 2, dim=1, keepdim=True)
-    da=torch.min(da).repeat(5).view(5,1)
+    # da=torch.min(da).repeat(5).view(5,1)
 
     new_state = torch.cat([radius, vx, vy, dg, rot_g, r_rot, radius_sum, hr_rot, da, px1, py1, vx1, vy1, radius1], dim=1)
 
@@ -140,7 +140,8 @@ def rotate(state):
 
         return dist
 
-    state.human_states = sorted(state.human_states, key=dist, reverse=True)
+    # state.human_states = sorted(state.human_states, key=dist, reverse=True)
+
     # current_dist_weight = policy_config.getfloat("sac_rl", "current_dist_weight")
 
     # def dist(human):
