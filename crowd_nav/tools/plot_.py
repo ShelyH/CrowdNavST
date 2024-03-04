@@ -32,6 +32,7 @@ def main():
     # nav_time = []
     infolist = []
     navtime = []
+    success_rt = []
     success_rate = 0
     timeout_rate = 0
     collision_rate = 0
@@ -39,7 +40,8 @@ def main():
         train_reward.append(float(r[1]))
         infolist.append((r[4]))
         navtime.append(float(r[3]))
-
+        success_rt.append(int(isinstance(info, ReachGoal)))
+    
     for info in infolist[-500:]:
         if info == 'Reaching goal':
             success_rate += 1
